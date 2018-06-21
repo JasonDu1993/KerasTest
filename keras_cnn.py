@@ -42,7 +42,11 @@ x_train = x_train.astype('float32')
 x_test = x_test.astype('float32')
 x_train /= 255
 x_test /= 255
-print('X_train shape:', x_train.shape)
+print('x_train shape:', x_train.shape, type(x_train))
+print('y_train shape:', y_train.shape, type(y_train))
+print('x_test shape:', x_test.shape, type(x_test))
+print('y_test shape:', y_test.shape, type(y_test))
+
 print(x_train.shape[0], 'train samples')
 print(x_test.shape[0], 'test samples')
 # print('x_train', y_train.shape, y_train.dtype)
@@ -50,8 +54,29 @@ print(x_test.shape[0], 'test samples')
 
 # 转换为one_hot类型
 y_train = np_utils.to_categorical(y_train, nb_classes)
+print('y_train to categorical', y_train.shape, type(y_train))
+print(y_train[0])
 y_test = np_utils.to_categorical(y_test, nb_classes)
 
 # 构建模型
 model = Sequential()
 model.add(Conv2D(filters=32, kernel_size=(3, 3), strides=1, padding='SAME'))
+model.add(Activation('relu'))
+model.add((MaxPooling2D(pool_size=(2, 2))))
+model.add(Dropout(0.25))
+model.add(Flatten())
+model.add(Dense(128))
+model.add(Activation('relu'))
+model.add(Dropout(0.5))
+model.add(Dense(nb_classes))
+model.add(Activation('softmax'))
+
+# 编译模型
+model.compile(optimizer='adadelta', loss='categorical_crossentropy', metrics=['accuracy'])
+# 训练模型
+model.fit(x_train, y_train, batch_size=batch_size, epochs=epoches, verbose=1, validation_data=(x_test, y_test))
+# 评估模型
+score = model.evaluate(x_test, y_test)
+print('score:', score, type(score))
+print('Test score:', score[0])
+print('Test accuracy:', score[1])
