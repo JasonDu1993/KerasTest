@@ -3,7 +3,7 @@ import cv2
 
 np.random.seed(1)
 from keras.datasets import mnist
-from keras.models import Sequential
+from keras.models import Sequential, Model
 from keras.layers import Dense, Dropout, Activation, Flatten
 from keras.layers import Conv2D, MaxPooling2D
 from keras.utils import np_utils
@@ -11,7 +11,7 @@ from keras import backend as K
 
 batch_size = 128
 nb_classes = 10
-epoches = 12
+epoches = 2
 # input image dimensions
 img_rows, img_cols = 28, 28
 # number of convolutional filters to use
@@ -60,7 +60,9 @@ y_test = np_utils.to_categorical(y_test, nb_classes)
 
 # 构建模型
 model = Sequential()
-model.add(Conv2D(filters=32, kernel_size=(3, 3), strides=1, padding='SAME'))
+a = Conv2D(filters=nb_filters, kernel_size=kernel_size, strides=1, padding='SAME', input_shape=input_shape)
+
+model.add(a)
 model.add(Activation('relu'))
 model.add((MaxPooling2D(pool_size=(2, 2))))
 model.add(Dropout(0.25))
@@ -70,9 +72,10 @@ model.add(Activation('relu'))
 model.add(Dropout(0.5))
 model.add(Dense(nb_classes))
 model.add(Activation('softmax'))
-
+print('model.layers', model.layers)
 # 编译模型
 model.compile(optimizer='adadelta', loss='categorical_crossentropy', metrics=['accuracy'])
+print('a', a.output)
 # 训练模型
 model.fit(x_train, y_train, batch_size=batch_size, epochs=epoches, verbose=1, validation_data=(x_test, y_test))
 # 评估模型
