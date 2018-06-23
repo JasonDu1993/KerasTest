@@ -11,7 +11,7 @@ from keras import backend as K
 
 batch_size = 128
 nb_classes = 10
-epoches = 2
+epoches = 1
 # input image dimensions
 img_rows, img_cols = 28, 28
 # number of convolutional filters to use
@@ -60,10 +60,13 @@ y_test = np_utils.to_categorical(y_test, nb_classes)
 
 # 构建模型
 model = Sequential()
-a = Conv2D(filters=nb_filters, kernel_size=kernel_size, strides=1, padding='SAME', input_shape=input_shape)
-
-model.add(a)
+conv1_1 = Conv2D(filters=nb_filters, kernel_size=kernel_size, strides=1, padding='SAME', input_shape=input_shape,
+                 name='conv1_1')
+model.add(conv1_1)
+conv1_2 = Conv2D(filters=60, kernel_size=kernel_size, strides=2, padding='VALID', name='conv1_2')
+model.add(conv1_2)
 model.add(Activation('relu'))
+# model.add()
 model.add((MaxPooling2D(pool_size=(2, 2))))
 model.add(Dropout(0.25))
 model.add(Flatten())
@@ -75,11 +78,25 @@ model.add(Activation('softmax'))
 print('model.layers', model.layers)
 # 编译模型
 model.compile(optimizer='adadelta', loss='categorical_crossentropy', metrics=['accuracy'])
-print('a', a.output)
+print('conv1_1', conv1_1.input, conv1_1.output, conv1_1.name)
+print('conv1_2', conv1_2.input, conv1_2.output, conv1_2.name)
 # 训练模型
-model.fit(x_train, y_train, batch_size=batch_size, epochs=epoches, verbose=1, validation_data=(x_test, y_test))
+# model.fit(x_train, y_train, batch_size=batch_size, epochs=epoches, verbose=2, validation_data=(x_test, y_test))
+# model.fit_generator()
+# model.save_weights('weight.h5')
 # 评估模型
-score = model.evaluate(x_test, y_test)
+model.load_weights('weight.h5')
+score = model.evaluate(x_test, y_test, verbose=2)
+print('metrics_names', model.metrics_names)
 print('score:', score, type(score))
 print('Test score:', score[0])
 print('Test accuracy:', score[1])
+
+x_1 = cv2.imread('x_train_0.jpg', flags=cv2.IMREAD_GRAYSCALE)
+print(x_1.shape)
+x_1 = x_1[np.newaxis, :, :, np.newaxis]
+print('x_1', x_1.shape)
+model1 = Sequential()
+
+pred = model.predict(x_1, batch_size=1, verbose=1)
+print('pred', pred, type(pred))
