@@ -86,7 +86,7 @@ print('conv1_2', conv1_2.input, conv1_2.output, conv1_2.name)
 # model.save_weights('weight.h5')
 # 评估模型
 model.load_weights('weight.h5')
-score = model.evaluate(x_test, y_test, verbose=2)
+score = model.evaluate(x_test, y_test, verbose=1)
 print('metrics_names', model.metrics_names)
 print('score:', score, type(score))
 print('Test score:', score[0])
