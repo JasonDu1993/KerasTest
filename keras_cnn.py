@@ -1,6 +1,6 @@
 import numpy as np
 import cv2
-
+import pandas as pd
 np.random.seed(1)
 from keras.datasets import mnist
 from keras.models import Sequential, Model
@@ -26,7 +26,7 @@ f = np.load('mnist.npz')
 x_train, y_train = f['x_train'], f['y_train']
 x_test, y_test = f['x_test'], f['y_test']
 f.close()
-print('x_train', x_test.shape)
+print('x_train', x_train.shape)
 # 根据不同的backend定下不同的格式
 if K.image_dim_ordering() == 'th':
     x_train = x_train.reshape(x_train.shape[0], 1, img_rows, img_cols)
@@ -66,8 +66,10 @@ model.add(conv1_1)
 conv1_2 = Conv2D(filters=60, kernel_size=kernel_size, strides=2, padding='VALID', name='conv1_2')
 model.add(conv1_2)
 model.add(Activation('relu'))
-# model.add()
-model.add((MaxPooling2D(pool_size=(2, 2))))
+# conv2_1 = Conv2D(filters=128, kernel_size=kernel_size, strides=1, padding='SAME', name='conv2_1')
+# model.add(conv2_1)
+maxpool1 = MaxPooling2D(pool_size=(2, 2), name='maxpool1')
+model.add(maxpool1)
 model.add(Dropout(0.25))
 model.add(Flatten())
 model.add(Dense(128))
@@ -76,16 +78,40 @@ model.add(Dropout(0.5))
 model.add(Dense(nb_classes))
 model.add(Activation('softmax'))
 print('model.layers', model.layers)
+one = model.get_layer('conv1_2')
+print('one specified layer', one.input, one.output)
+print('model.summary()', model.summary())
 # 编译模型
-model.compile(optimizer='adadelta', loss='categorical_crossentropy', metrics=['accuracy'])
+model.compile(optimizer='adadelta', loss='categorical_crossentropy', metrics=['accuracy', 'mse', 'acc', 'acc'])
 print('conv1_1', conv1_1.input, conv1_1.output, conv1_1.name)
 print('conv1_2', conv1_2.input, conv1_2.output, conv1_2.name)
+print('maxpool1', maxpool1.input, maxpool1.output, maxpool1.name)
+print('compile model.summary()', model.summary())
 # 训练模型
 # model.fit(x_train, y_train, batch_size=batch_size, epochs=epoches, verbose=2, validation_data=(x_test, y_test))
 # model.fit_generator()
 # model.save_weights('weight.h5')
 # 评估模型
+config = model.get_config()
+w = model.get_weights()
+w2 = model.weights
+tojson = model.to_json()
+toyaml = model.to_yaml()
+print('config', pd.DataFrame(config), type(config))
+for i in w:
+    print('w', i.shape, type(i))
+print('w2', w2, type(w2))
 model.load_weights('weight.h5')
+print('tojson', tojson)
+print('toyaml', toyaml)
+config1 = model.get_config()
+
+w1 = model.get_weights()
+w21 = model.weights
+print('load_weights config', config1, type(config1))
+for i1 in w1:
+    print('load_weights w1', i1.shape, type(i1))
+print('load_weights w21', w21, type(w21))
 score = model.evaluate(x_test, y_test, verbose=1)
 print('metrics_names', model.metrics_names)
 print('score:', score, type(score))
