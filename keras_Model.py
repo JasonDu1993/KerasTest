@@ -1,13 +1,33 @@
 import numpy as np
 import cv2
-from keras.layers import Dense, Input, Dropout, Conv2D, LSTM, MaxPool2D
+import tensorflow as tf
+from keras.layers import Dense, Input, Dropout, Conv2D, LSTM, MaxPool2D, Lambda
 from keras.layers import concatenate, add
-from keras.models import Model
+from keras.models import Model, load_model, save_model
 from keras.utils import np_utils
 from keras import optimizers
+from keras import losses
+from keras import metrics
+from keras import objectives
+from keras import backend as K
+from keras.applications import vgg16
+from keras_custom_layer import CustomLayer
 
+# 测试keras自带的vgg16
+# a = vgg16.VGG16()
+# print('vgg16.VGG16', type(a))
+# 测试卷积网络的输入输出
 # x_input = Input(shape=(256, 256, 3))
 # y_output = Conv2D(128, (3, 3), padding='SAME')(x_input)
+# print('y_output', y_output)
+
+# 测试Lambda层
+x_input = Input(shape=(10, 3))
+# 测试自定义网络的输入输出
+# x_input = Input(shape=(10, 3))
+# a = CustomLayer(output_dim=5)
+# print('aaa')
+# y_output = a(x_input)
 # print('y_output', y_output)
 # 残差网络
 x = Input(shape=(256, 256, 3))
@@ -37,8 +57,10 @@ x = b(inputs)
 x = Dense(784, activation='relu')(x)
 print('x', x, type(x))
 auxiliary_input = Input(shape=(784,), name='aux_input')
+
 # 共享层
 share = Dense(256, activation='relu', name='share')
+print('share name', type(share), share.name)
 s1 = share(x)
 print('s1', s1)
 s2 = share(auxiliary_input)
@@ -59,10 +81,77 @@ aux_output = Dense(10, activation='sigmoid')(concat)
 
 # 多输入多输出模型
 model = Model(inputs=[inputs, auxiliary_input], outputs=[predictions, aux_output])
-model.compile(optimizer=optimizers.Adadelta(lr=1e-3), loss='categorical_crossentropy', metrics=['acc'],
+
+
+# 自定义loss 方法一、定义一个loss函数
+def custom_loss(y_true, y_pred):
+    print('custom_loss y_true:', y_true)
+    a = K.mean((y_pred - y_true), axis=-1)
+    print('a', a)
+    return a
+
+
+def custom_categorical_crossentropy(target, output, from_logits=False, axis=-1):
+    """Categorical crossentropy between an output tensor and a target tensor.
+
+    # Arguments
+        target: A tensor of the same shape as `output`.
+        output: A tensor resulting from a softmax
+            (unless `from_logits` is True, in which
+            case `output` is expected to be the logits).
+        from_logits: Boolean, whether `output` is the
+            result of a softmax, or is a tensor of logits.
+        axis: Int specifying the channels axis. `axis=-1`
+            corresponds to data format `channels_last`,
+            and `axis=1` corresponds to data format
+            `channels_first`.
+
+    # Returns
+        Output tensor.
+
+    # Raises
+        ValueError: if `axis` is neither -1 nor one of
+            the axes of `output`.
+    """
+    print('target', target)
+    print('output', output)
+    output_dimensions = list(range(len(output.get_shape())))
+    print('output_dimensions', output_dimensions)
+    if axis != -1 and axis not in output_dimensions:
+        raise ValueError(
+            '{}{}{}'.format(
+                'Unexpected channels axis {}. '.format(axis),
+                'Expected to be -1 or one of the axes of `output`, ',
+                'which has {} dimensions.'.format(len(output.get_shape()))))
+    # Note: tf.nn.softmax_cross_entropy_with_logits
+    # expects logits, Keras expects probabilities.
+    if not from_logits:
+        # scale preds so that the class probas of each sample sum to 1
+        output /= tf.reduce_sum(output, axis, True)
+        print('reduce_sum', output)
+        # manual computation of crossentropy
+        _epsilon = 1e-7
+        output = tf.clip_by_value(output, _epsilon, 1. - _epsilon)
+        print('clip_by_value', output)
+        return - tf.reduce_sum(target * tf.log(output), axis)
+    else:
+        return tf.nn.softmax_cross_entropy_with_logits(labels=target,
+                                                       logits=output)
+
+
+# model.compile(optimizer=optimizers.Adadelta(lr=1e-3), loss=custom_categorical_crossentropy, metrics=['acc'],
+#               loss_weights=[1, 0.2])
+model.compile(optimizer=optimizers.Adadelta(lr=1e-3),
+              loss=losses.categorical_crossentropy,
+              metrics=[metrics.mean_squared_error, metrics.binary_crossentropy],
               loss_weights=[1, 0.2])
 print('summary', model.summary())
-history = model.fit([x_train, x_train], [y_train, y_train], batch_size=32, epochs=1, verbose=1, validation_split=0.1)
+for i in model.layers:
+    print(i.name, ' ', end='')
+print('layers', model.layers)
+model.save('model_save_before_fit.h5')
+save_model(model, 'model_save_model_function_before_fit.h5')
+history = model.fit([x_train, x_train], [y_train, y_train], batch_size=32, epochs=1, verbose=2, validation_split=0.1)
 score = model.evaluate([x_test, x_test], [y_test, y_test], verbose=1)
 # 共享视觉模型
 digit_input = Input(shape=(28, 28, 1))
@@ -71,9 +160,8 @@ x = Conv2D(64, (3, 3), padding='SAME')(x)
 print('x', x)
 x = MaxPool2D((2, 2), strides=2)(x)
 print('x', x)
-
 print('history', type(history), list(history.history.keys()), history.history)
-model.save_weights('model.h5')
+model.save_weights('model_weights.h5')
 
 print('metrics_names', model.metrics_names)
 print('score:', score, type(score))
