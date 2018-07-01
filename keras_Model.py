@@ -151,7 +151,8 @@ for i in model.layers:
 print('layers', model.layers)
 model.save('model_save_before_fit.h5')
 save_model(model, 'model_save_model_function_before_fit.h5')
-history = model.fit([x_train, x_train], [y_train, y_train], batch_size=32, epochs=1, verbose=2, validation_split=0.1)
+history = model.fit([x_train, x_train], [y_train, y_train], batch_size=32, epochs=1, verbose=2,
+                    validation_data=([x_test, x_test], [y_test, y_test]))
 score = model.evaluate([x_test, x_test], [y_test, y_test], verbose=1)
 # 共享视觉模型
 digit_input = Input(shape=(28, 28, 1))
